@@ -67,8 +67,25 @@ public class SolrHtmlpageIndexer implements SolrIndexer
     private static final String PROPERTY_NAME = "htmlpage-solr.indexer.name";
     private static final String PROPERTY_VERSION = "htmlpage-solr.indexer.version";
     private static final String PROPERTY_INDEXER_ENABLE = "htmlpage-solr.indexer.enable";
-    private static final String SITE = AppPropertiesService.getProperty( "lutece.name" );
     private static final String PARAMETER_HTMLPAGE_ID = "htmlpage_id";
+
+    // Site name
+    private static final String PROPERTY_SITE = "lutece.name";
+    private static final String PROPERTY_PROD_URL = "lutece.prod.url";
+    private String _strSite;
+    private String _strProdUrl;
+
+    public SolrHtmlpageIndexer(  )
+    {
+        super(  );
+        _strSite = AppPropertiesService.getProperty( PROPERTY_SITE );
+        _strProdUrl = AppPropertiesService.getProperty( PROPERTY_PROD_URL );
+
+        if ( !_strProdUrl.endsWith( "/" ) )
+        {
+            _strProdUrl = _strProdUrl + "/";
+        }
+    }
 
     public String getDescription(  )
     {
@@ -96,7 +113,7 @@ public class SolrHtmlpageIndexer implements SolrIndexer
 
         for ( HtmlPage htmlpage : listHtmlPages )
         {
-            UrlItem url = new UrlItem( strPortalUrl );
+            UrlItem url = new UrlItem( _strProdUrl + strPortalUrl );
             url.addParameter( XPageAppService.PARAM_XPAGE_APP, HtmlPagePlugin.PLUGIN_NAME );
             url.addParameter( PARAMETER_HTMLPAGE_ID, htmlpage.getId(  ) );
 
@@ -202,10 +219,9 @@ public class SolrHtmlpageIndexer implements SolrIndexer
 
         // Setting the Type field
         item.setType( HtmlPagePlugin.PLUGIN_NAME );
-        
-        // Setting the Site field
-        item.setSite( SITE );
 
+        // Setting the Site field
+        item.setSite( _strSite );
 
         // return the item
         return item;
