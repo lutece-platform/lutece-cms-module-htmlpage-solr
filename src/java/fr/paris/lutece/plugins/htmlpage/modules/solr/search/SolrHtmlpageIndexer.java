@@ -36,6 +36,7 @@ package fr.paris.lutece.plugins.htmlpage.modules.solr.search;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -48,6 +49,7 @@ import fr.paris.lutece.plugins.search.solr.business.field.Field;
 import fr.paris.lutece.plugins.search.solr.indexer.SolrIndexer;
 import fr.paris.lutece.plugins.search.solr.indexer.SolrItem;
 import fr.paris.lutece.portal.service.content.XPageAppService;
+import fr.paris.lutece.portal.service.message.SiteMessageException;
 import fr.paris.lutece.portal.service.plugin.Plugin;
 import fr.paris.lutece.portal.service.plugin.PluginService;
 import fr.paris.lutece.portal.service.util.AppLogService;
@@ -140,37 +142,36 @@ public class SolrHtmlpageIndexer implements SolrIndexer
 
     public List<Field> getAdditionalFields(  )
     {
-        return null;
+        return new ArrayList<Field>(  );
     }
 
     /**
-     * Return a list of lucene document for incremental indexing
+     * Return a list of Solr item for incremental indexing
      * @param strId the uid of the document
      * @return listDocuments the document list
      */
-
-    /*
-    public List<Document> getDocuments( String strId )
+    public List<SolrItem> getDocuments( String strId )
         throws IOException, InterruptedException, SiteMessageException
     {
-        ArrayList<org.apache.lucene.document.Document> listDocuments = new ArrayList<Document>(  );
+        ArrayList<SolrItem> listDocuments = new ArrayList<SolrItem>(  );
         String strPortalUrl = AppPathService.getPortalUrl(  );
         Plugin plugin = PluginService.getPlugin( HtmlPagePlugin.PLUGIN_NAME );
-    
+
         HtmlPage htmlpage = HtmlPageHome.findEnabledHtmlPage( Integer.parseInt( strId ), plugin );
-        if( htmlpage != null )
+
+        if ( htmlpage != null )
         {
             UrlItem url = new UrlItem( strPortalUrl );
             url.addParameter( XPageAppService.PARAM_XPAGE_APP, HtmlPagePlugin.PLUGIN_NAME );
             url.addParameter( PARAMETER_HTMLPAGE_ID, htmlpage.getId(  ) );
-    
-            org.apache.lucene.document.Document docHtmlPage = getDocument( htmlpage, url.getUrl(  ), plugin );
-    
+
+            SolrItem docHtmlPage = getDocument( htmlpage, url.getUrl(  ), plugin );
+
             listDocuments.add( docHtmlPage );
         }
+
         return listDocuments;
     }
-    */
 
     /**
      * Builds a solrItem which will be used by Solr during the indexing of the pages of the site with the following
