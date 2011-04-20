@@ -33,29 +33,32 @@
  */
 package fr.paris.lutece.plugins.htmlpage.modules.solr.search;
 
-import java.io.IOException;
-import java.io.Reader;
-import java.io.StringReader;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import org.apache.lucene.demo.html.HTMLParser;
 import fr.paris.lutece.plugins.htmlpage.business.HtmlPage;
 import fr.paris.lutece.plugins.htmlpage.business.HtmlPageHome;
 import fr.paris.lutece.plugins.htmlpage.service.HtmlPagePlugin;
+import fr.paris.lutece.plugins.htmlpage.utils.HtmlPageIndexerUtils;
 import fr.paris.lutece.plugins.search.solr.business.field.Field;
 import fr.paris.lutece.plugins.search.solr.indexer.SolrIndexer;
+import fr.paris.lutece.plugins.search.solr.indexer.SolrIndexerService;
 import fr.paris.lutece.plugins.search.solr.indexer.SolrItem;
+import fr.paris.lutece.plugins.search.solr.util.SolrConstants;
 import fr.paris.lutece.portal.service.content.XPageAppService;
 import fr.paris.lutece.portal.service.message.SiteMessageException;
 import fr.paris.lutece.portal.service.plugin.Plugin;
 import fr.paris.lutece.portal.service.plugin.PluginService;
-import fr.paris.lutece.portal.service.util.AppLogService;
 import fr.paris.lutece.portal.service.util.AppPathService;
 import fr.paris.lutece.portal.service.util.AppPropertiesService;
 import fr.paris.lutece.util.url.UrlItem;
+
+import org.apache.lucene.demo.html.HTMLParser;
+
+import java.io.IOException;
+import java.io.Reader;
+import java.io.StringReader;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 
 /**
@@ -74,6 +77,7 @@ public class SolrHtmlpageIndexer implements SolrIndexer
     // Site name
     private static final String PROPERTY_SITE = "lutece.name";
     private static final String PROPERTY_PROD_URL = "lutece.prod.url";
+    private static final List<String> LIST_RESSOURCES_NAME = new ArrayList<String>(  );
     private String _strSite;
     private String _strProdUrl;
 
@@ -87,27 +91,39 @@ public class SolrHtmlpageIndexer implements SolrIndexer
         {
             _strProdUrl = _strProdUrl + "/";
         }
+
+        LIST_RESSOURCES_NAME.add( HtmlPageIndexerUtils.CONSTANT_TYPE_RESOURCE );
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public String getDescription(  )
     {
         return AppPropertiesService.getProperty( PROPERTY_DESCRIPTION );
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public String getName(  )
     {
         return AppPropertiesService.getProperty( PROPERTY_NAME );
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public String getVersion(  )
     {
         return AppPropertiesService.getProperty( PROPERTY_VERSION );
     }
 
-    public Map<String, SolrItem> index(  )
+    /**
+     * {@inheritDoc}
+     */
+    public void indexDocuments(  ) throws IOException, InterruptedException, SiteMessageException
     {
-        Map<String, SolrItem> items = new HashMap<String, SolrItem>(  );
-
         String strPortalUrl = AppPathService.getPortalUrl(  );
         Plugin plugin = PluginService.getPlugin( HtmlPagePlugin.PLUGIN_NAME );
 
@@ -121,25 +137,26 @@ public class SolrHtmlpageIndexer implements SolrIndexer
 
             SolrItem docHtmlPage;
 
-            try
+            docHtmlPage = getDocument( htmlpage, url.getUrl(  ), plugin );
+
+            if ( docHtmlPage != null )
             {
-                docHtmlPage = getDocument( htmlpage, url.getUrl(  ), plugin );
-                items.put( getLog( docHtmlPage ), docHtmlPage );
-            }
-            catch ( IOException e )
-            {
-                AppLogService.error( e );
+                SolrIndexerService.write( docHtmlPage );
             }
         }
-
-        return items;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public boolean isEnable(  )
     {
         return "true".equalsIgnoreCase( AppPropertiesService.getProperty( PROPERTY_INDEXER_ENABLE ) );
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public List<Field> getAdditionalFields(  )
     {
         return new ArrayList<Field>(  );
@@ -151,7 +168,6 @@ public class SolrHtmlpageIndexer implements SolrIndexer
      * @return listDocuments the document list
      */
     public List<SolrItem> getDocuments( String strId )
-        throws IOException, InterruptedException, SiteMessageException
     {
         ArrayList<SolrItem> listDocuments = new ArrayList<SolrItem>(  );
         String strPortalUrl = AppPathService.getPortalUrl(  );
@@ -165,9 +181,17 @@ public class SolrHtmlpageIndexer implements SolrIndexer
             url.addParameter( XPageAppService.PARAM_XPAGE_APP, HtmlPagePlugin.PLUGIN_NAME );
             url.addParameter( PARAMETER_HTMLPAGE_ID, htmlpage.getId(  ) );
 
-            SolrItem docHtmlPage = getDocument( htmlpage, url.getUrl(  ), plugin );
+            SolrItem docHtmlPage;
 
-            listDocuments.add( docHtmlPage );
+            try
+            {
+                docHtmlPage = getDocument( htmlpage, url.getUrl(  ), plugin );
+                listDocuments.add( docHtmlPage );
+            }
+            catch ( IOException e )
+            {
+                throw new RuntimeException( e );
+            }
         }
 
         return listDocuments;
@@ -193,7 +217,7 @@ public class SolrHtmlpageIndexer implements SolrIndexer
 
         // Setting the Uid field
         String strIdHtmlPage = String.valueOf( htmlpage.getId(  ) );
-        item.setUid( strIdHtmlPage + "_" + SHORT_NAME );
+        item.setUid( getResourceUid( strIdHtmlPage, HtmlPageIndexerUtils.CONSTANT_TYPE_RESOURCE ) );
 
         // Setting the Content field
         String strContentToIndex = getContentToIndex( htmlpage );
@@ -248,21 +272,21 @@ public class SolrHtmlpageIndexer implements SolrIndexer
     }
 
     /**
-     * Generate the log line for the specified {@link SolrItem}
-     * @param item The {@link SolrItem}
-     * @return The string representing the log line
+     * {@inheritDoc}
      */
-    private String getLog( SolrItem item )
+    public String getResourceUid( String strResourceId, String strResourceType )
     {
-        StringBuilder sbLogs = new StringBuilder(  );
-        sbLogs.append( "indexing " );
-        sbLogs.append( item.getType(  ) );
-        sbLogs.append( " id : " );
-        sbLogs.append( item.getUid(  ) );
-        sbLogs.append( " Title : " );
-        sbLogs.append( item.getTitle(  ) );
-        sbLogs.append( "<br/>" );
+        StringBuffer sb = new StringBuffer( strResourceId );
+        sb.append( SolrConstants.CONSTANT_UNDERSCORE ).append( SHORT_NAME );
 
-        return sbLogs.toString(  );
+        return sb.toString(  );
+    }
+
+    /**
+    * {@inheritDoc}
+    */
+    public List<String> getResourcesName(  )
+    {
+        return LIST_RESSOURCES_NAME;
     }
 }
