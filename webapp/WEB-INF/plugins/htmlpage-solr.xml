@@ -10,8 +10,8 @@
     <installation></installation>
     <changes></changes>
     <user-guide></user-guide>
-    <description>htmlpage-solr.plugin.description</description>
-    <provider>htmlpage-solr.plugin.provider</provider>
+    <description>module.htmlpage.solr.module.description</description>
+    <provider>module.htmlpage.solr.module.provider</provider>
     <provider-url>http://lutece.paris.fr</provider-url>
     <icon-url>images/admin/skin/plugins/htmlpage/modules/solr/htmlpage-solr.png</icon-url>
     <copyright>Copyright 2001-2011 Mairie de Paris</copyright>
