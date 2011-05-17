@@ -33,6 +33,15 @@
  */
 package fr.paris.lutece.plugins.htmlpage.modules.solr.search;
 
+import java.io.IOException;
+import java.io.Reader;
+import java.io.StringReader;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+
+import org.apache.lucene.demo.html.HTMLParser;
+
 import fr.paris.lutece.plugins.htmlpage.business.HtmlPage;
 import fr.paris.lutece.plugins.htmlpage.business.HtmlPageHome;
 import fr.paris.lutece.plugins.htmlpage.service.HtmlPagePlugin;
@@ -46,19 +55,8 @@ import fr.paris.lutece.portal.service.content.XPageAppService;
 import fr.paris.lutece.portal.service.message.SiteMessageException;
 import fr.paris.lutece.portal.service.plugin.Plugin;
 import fr.paris.lutece.portal.service.plugin.PluginService;
-import fr.paris.lutece.portal.service.util.AppPathService;
 import fr.paris.lutece.portal.service.util.AppPropertiesService;
 import fr.paris.lutece.util.url.UrlItem;
-
-import org.apache.lucene.demo.html.HTMLParser;
-
-import java.io.IOException;
-import java.io.Reader;
-import java.io.StringReader;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
 
 
 /**
@@ -74,23 +72,11 @@ public class SolrHtmlpageIndexer implements SolrIndexer
     private static final String PROPERTY_INDEXER_ENABLE = "htmlpage-solr.indexer.enable";
     private static final String PARAMETER_HTMLPAGE_ID = "htmlpage_id";
 
-    // Site name
-    private static final String PROPERTY_SITE = "lutece.name";
-    private static final String PROPERTY_PROD_URL = "lutece.prod.url";
     private static final List<String> LIST_RESSOURCES_NAME = new ArrayList<String>(  );
-    private String _strSite;
-    private String _strProdUrl;
 
     public SolrHtmlpageIndexer(  )
     {
         super(  );
-        _strSite = AppPropertiesService.getProperty( PROPERTY_SITE );
-        _strProdUrl = AppPropertiesService.getProperty( PROPERTY_PROD_URL );
-
-        if ( !_strProdUrl.endsWith( "/" ) )
-        {
-            _strProdUrl = _strProdUrl + "/";
-        }
 
         LIST_RESSOURCES_NAME.add( HtmlPageIndexerUtils.CONSTANT_TYPE_RESOURCE );
     }
@@ -124,14 +110,13 @@ public class SolrHtmlpageIndexer implements SolrIndexer
      */
     public void indexDocuments(  ) throws IOException, InterruptedException, SiteMessageException
     {
-        String strPortalUrl = AppPathService.getPortalUrl(  );
         Plugin plugin = PluginService.getPlugin( HtmlPagePlugin.PLUGIN_NAME );
 
         Collection<HtmlPage> listHtmlPages = HtmlPageHome.findEnabledHtmlPageList( plugin );
 
         for ( HtmlPage htmlpage : listHtmlPages )
         {
-            UrlItem url = new UrlItem( _strProdUrl + strPortalUrl );
+            UrlItem url = new UrlItem( SolrIndexerService.getBaseUrl(  ) );
             url.addParameter( XPageAppService.PARAM_XPAGE_APP, HtmlPagePlugin.PLUGIN_NAME );
             url.addParameter( PARAMETER_HTMLPAGE_ID, htmlpage.getId(  ) );
 
@@ -170,14 +155,13 @@ public class SolrHtmlpageIndexer implements SolrIndexer
     public List<SolrItem> getDocuments( String strId )
     {
         ArrayList<SolrItem> listDocuments = new ArrayList<SolrItem>(  );
-        String strPortalUrl = AppPathService.getPortalUrl(  );
         Plugin plugin = PluginService.getPlugin( HtmlPagePlugin.PLUGIN_NAME );
 
         HtmlPage htmlpage = HtmlPageHome.findEnabledHtmlPage( Integer.parseInt( strId ), plugin );
 
         if ( htmlpage != null )
         {
-            UrlItem url = new UrlItem( strPortalUrl );
+            UrlItem url = new UrlItem( SolrIndexerService.getBaseUrl(  ) );
             url.addParameter( XPageAppService.PARAM_XPAGE_APP, HtmlPagePlugin.PLUGIN_NAME );
             url.addParameter( PARAMETER_HTMLPAGE_ID, htmlpage.getId(  ) );
 
@@ -246,7 +230,7 @@ public class SolrHtmlpageIndexer implements SolrIndexer
         item.setType( HtmlPagePlugin.PLUGIN_NAME );
 
         // Setting the Site field
-        item.setSite( _strSite );
+        item.setSite( SolrIndexerService.getWebAppName(  ) );
 
         // return the item
         return item;
