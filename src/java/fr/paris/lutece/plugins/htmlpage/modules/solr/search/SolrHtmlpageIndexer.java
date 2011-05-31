@@ -52,9 +52,9 @@ import fr.paris.lutece.plugins.search.solr.indexer.SolrIndexerService;
 import fr.paris.lutece.plugins.search.solr.indexer.SolrItem;
 import fr.paris.lutece.plugins.search.solr.util.SolrConstants;
 import fr.paris.lutece.portal.service.content.XPageAppService;
-import fr.paris.lutece.portal.service.message.SiteMessageException;
 import fr.paris.lutece.portal.service.plugin.Plugin;
 import fr.paris.lutece.portal.service.plugin.PluginService;
+import fr.paris.lutece.portal.service.util.AppLogService;
 import fr.paris.lutece.portal.service.util.AppPropertiesService;
 import fr.paris.lutece.util.url.UrlItem;
 
@@ -73,7 +73,8 @@ public class SolrHtmlpageIndexer implements SolrIndexer
     private static final String PARAMETER_HTMLPAGE_ID = "htmlpage_id";
 
     private static final List<String> LIST_RESSOURCES_NAME = new ArrayList<String>(  );
-
+    private static final String HTMLPAGE_INDEXATION_ERROR = "An error occured during the indexation of the html page number ";
+    
     public SolrHtmlpageIndexer(  )
     {
         super(  );
@@ -108,27 +109,38 @@ public class SolrHtmlpageIndexer implements SolrIndexer
     /**
      * {@inheritDoc}
      */
-    public void indexDocuments(  ) throws IOException, InterruptedException, SiteMessageException
+    public List<String> indexDocuments(  )
     {
         Plugin plugin = PluginService.getPlugin( HtmlPagePlugin.PLUGIN_NAME );
 
         Collection<HtmlPage> listHtmlPages = HtmlPageHome.findEnabledHtmlPageList( plugin );
-
+        List<String> lstErrors = new ArrayList<String>(  );
+        
         for ( HtmlPage htmlpage : listHtmlPages )
         {
-            UrlItem url = new UrlItem( SolrIndexerService.getBaseUrl(  ) );
-            url.addParameter( XPageAppService.PARAM_XPAGE_APP, HtmlPagePlugin.PLUGIN_NAME );
-            url.addParameter( PARAMETER_HTMLPAGE_ID, htmlpage.getId(  ) );
+        	try
+        	{
+        		UrlItem url = new UrlItem( SolrIndexerService.getBaseUrl(  ) );
+        		url.addParameter( XPageAppService.PARAM_XPAGE_APP, HtmlPagePlugin.PLUGIN_NAME );
+        		url.addParameter( PARAMETER_HTMLPAGE_ID, htmlpage.getId(  ) );
 
-            SolrItem docHtmlPage;
+        		SolrItem docHtmlPage;
 
-            docHtmlPage = getDocument( htmlpage, url.getUrl(  ), plugin );
+        		docHtmlPage = getDocument( htmlpage, url.getUrl(  ), plugin );
 
-            if ( docHtmlPage != null )
-            {
-                SolrIndexerService.write( docHtmlPage );
-            }
+        		if ( docHtmlPage != null )
+        		{
+        			SolrIndexerService.write( docHtmlPage );
+        		}
+        	}
+        	catch ( Exception e )
+        	{
+        		lstErrors.add( SolrIndexerService.buildErrorMessage( e ) );
+        		AppLogService.error( HTMLPAGE_INDEXATION_ERROR + htmlpage.getId(  ), e );
+        	}
         }
+        
+        return lstErrors;
     }
 
     /**
