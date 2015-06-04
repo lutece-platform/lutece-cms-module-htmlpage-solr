@@ -33,14 +33,26 @@
  */
 package fr.paris.lutece.plugins.htmlpage.modules.solr.search;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.Reader;
 import java.io.StringReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import org.apache.lucene.demo.html.HTMLParser;
+
+
+
+import org.apache.tika.exception.TikaException;
+import org.apache.tika.metadata.Metadata;
+import org.apache.tika.parser.ParseContext;
+import org.apache.tika.parser.html.HtmlParser;
+import org.apache.tika.sax.BodyContentHandler;
+import org.xml.sax.ContentHandler;
+import org.xml.sax.SAXException;
 
 import fr.paris.lutece.plugins.htmlpage.business.HtmlPage;
 import fr.paris.lutece.plugins.htmlpage.business.HtmlPageHome;
@@ -217,23 +229,20 @@ public class SolrHtmlpageIndexer implements SolrIndexer
 
         // Setting the Content field
         String strContentToIndex = getContentToIndex( htmlpage );
-        StringReader readerPage = new StringReader( strContentToIndex );
-        HTMLParser parser = new HTMLParser( readerPage );
-
-        //the content of the question/answer is recovered in the parser because this one
-        //had replaced the encoded caracters (as &eacute;) by the corresponding special caracter (as ?)
-        Reader reader = parser.getReader(  );
-        int c;
-        StringBuffer sb = new StringBuffer(  );
-
-        while ( ( c = reader.read(  ) ) != -1 )
-        {
-            sb.append( String.valueOf( (char) c ) );
-        }
-
-        reader.close(  );
-
-        item.setContent( sb.toString(  ) );
+        HtmlParser parser = new HtmlParser(  );
+        ContentHandler handler = new BodyContentHandler();
+        Metadata metadata = new Metadata();
+        InputStream stream = new ByteArrayInputStream(strContentToIndex.getBytes(StandardCharsets.UTF_8));
+        try {
+			parser.parse(stream,  handler, metadata, new ParseContext());
+		} catch (SAXException e) {
+			e.printStackTrace();
+		} catch (TikaException e) {
+			e.printStackTrace();
+		}
+        
+        
+        item.setContent( handler.toString(  ) );
 
         // Setting the Title field
         item.setTitle( htmlpage.getDescription(  ) );
