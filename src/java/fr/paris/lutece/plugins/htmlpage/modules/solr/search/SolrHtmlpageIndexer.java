@@ -33,12 +33,9 @@
  */
 package fr.paris.lutece.plugins.htmlpage.modules.solr.search;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.Reader;
 import java.io.StringReader;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -46,18 +43,12 @@ import java.util.List;
 
 
 
-import org.apache.tika.exception.TikaException;
-import org.apache.tika.metadata.Metadata;
-import org.apache.tika.parser.ParseContext;
-import org.apache.tika.parser.html.HtmlParser;
-import org.apache.tika.sax.BodyContentHandler;
-import org.xml.sax.ContentHandler;
-import org.xml.sax.SAXException;
 
 import fr.paris.lutece.plugins.htmlpage.business.HtmlPage;
 import fr.paris.lutece.plugins.htmlpage.business.HtmlPageHome;
 import fr.paris.lutece.plugins.htmlpage.service.HtmlPagePlugin;
 import fr.paris.lutece.plugins.htmlpage.utils.HtmlPageIndexerUtils;
+import fr.paris.lutece.plugins.search.solr.util.SolrHtmlParserUtil;
 import fr.paris.lutece.plugins.search.solr.business.field.Field;
 import fr.paris.lutece.plugins.search.solr.indexer.SolrIndexer;
 import fr.paris.lutece.plugins.search.solr.indexer.SolrIndexerService;
@@ -69,12 +60,14 @@ import fr.paris.lutece.portal.service.plugin.PluginService;
 import fr.paris.lutece.portal.service.util.AppLogService;
 import fr.paris.lutece.portal.service.util.AppPropertiesService;
 import fr.paris.lutece.util.url.UrlItem;
+import jakarta.enterprise.context.ApplicationScoped;
 
 
 /**
  * The Htmlpage indexer for Solr search platform
  *
  */
+@ApplicationScoped
 public class SolrHtmlpageIndexer implements SolrIndexer
 {
     public static final String SHORT_NAME = "hpg";
@@ -84,14 +77,10 @@ public class SolrHtmlpageIndexer implements SolrIndexer
     private static final String PROPERTY_INDEXER_ENABLE = "htmlpage-solr.indexer.enable";
     private static final String PARAMETER_HTMLPAGE_ID = "htmlpage_id";
 
-    private static final List<String> LIST_RESSOURCES_NAME = new ArrayList<String>(  );
-    private static final String HTMLPAGE_INDEXATION_ERROR = "An error occured during the indexation of the html page number ";
+    private static final List<String> LIST_RESSOURCES_NAME = new ArrayList<>( List.of( HtmlPageIndexerUtils.CONSTANT_TYPE_RESOURCE ) );
     
     public SolrHtmlpageIndexer(  )
     {
-        super(  );
-
-        LIST_RESSOURCES_NAME.add( HtmlPageIndexerUtils.CONSTANT_TYPE_RESOURCE );
     }
 
     /**
@@ -148,7 +137,7 @@ public class SolrHtmlpageIndexer implements SolrIndexer
         	catch ( Exception e )
         	{
         		lstErrors.add( SolrIndexerService.buildErrorMessage( e ) );
-        		AppLogService.error( HTMLPAGE_INDEXATION_ERROR + htmlpage.getId(  ), e );
+        		AppLogService.error( "An error occured during the indexation of the html page number {}", htmlpage.getId(  ), e );
         	}
         }
         
@@ -229,20 +218,7 @@ public class SolrHtmlpageIndexer implements SolrIndexer
 
         // Setting the Content field
         String strContentToIndex = getContentToIndex( htmlpage );
-        HtmlParser parser = new HtmlParser(  );
-        ContentHandler handler = new BodyContentHandler();
-        Metadata metadata = new Metadata();
-        InputStream stream = new ByteArrayInputStream(strContentToIndex.getBytes(StandardCharsets.UTF_8));
-        try {
-			parser.parse(stream,  handler, metadata, new ParseContext());
-		} catch (SAXException e) {
-			e.printStackTrace();
-		} catch (TikaException e) {
-			e.printStackTrace();
-		}
-        
-        
-        item.setContent( handler.toString(  ) );
+        item.setContent( SolrHtmlParserUtil.parseHtml( strContentToIndex ) );
 
         // Setting the Title field
         item.setTitle( htmlpage.getDescription(  ) );
